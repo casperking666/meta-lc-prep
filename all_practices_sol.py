@@ -1,6 +1,8 @@
 from collections import Counter
 from collections import deque
 import heapq
+from collections import defaultdict
+# for recursion, remember to add nonlocal
 
 
 # questions I can't solve in second attempt 162, 50
@@ -464,12 +466,11 @@ class Solution:
             if char in s_map:
                 times = s_map[char]
                 res += char * times
-                s_map[char] -= times
+                del s_map[char]
         
         for k, v in s_map.items():
-            for i in range(v):
-                res += k
-        return 
+            res += k * v
+        return res
     
 # 560
 # note the if statement, that should go first as we check the last state
@@ -527,37 +528,32 @@ class Node:
         self.next = next
         self.random = random
 """
-
 class Solution:
-    def __init__(self):
-        self.visited = {}
-
-    def copyNode(self, node):
-        if not node:
-            return None
-        if node in self.visited:
-            return self.visited[node]
-        else:
-            newNode = Node(node.val)
-            self.visited[node] = newNode
-            return newNode
-
     def copyRandomList(self, head: 'Optional[Node]') -> 'Optional[Node]':
-        if not head:
+        if head is None:
             return None
         
-        dummy_head = head
-        new_node = Node(head.val)
-        self.visited[head] = new_node
+        def copyNode(node):
+            if node is None:
+                return None
+            elif node in visited:
+                return visited[node]
+            else:
+                newNode = Node(node.val)
+                visited[node] = newNode
+                return newNode
+
+        visited = {}
+        dummyHead = head
+        visited[head] = Node(head.val)
 
         while head:
-            new_node.next = self.copyNode(head.next)
-            new_node.random = self.copyNode(head.random)
+            visited[head].next = copyNode(head.next)
+            visited[head].random = copyNode(head.random)
 
             head = head.next
-            new_node = new_node.next
-
-        return self.visited[dummy_head]
+        
+        return visited[dummyHead]
 
 # 215
 # does nums have duplicate numbers
@@ -961,7 +957,7 @@ class Solution:
 # one answer that makes more sense to me
 # tho I do like one recursion matches one pop idea from https://programmercarl.com/0129.%E6%B1%82%E6%A0%B9%E5%88%B0%E5%8F%B6%E5%AD%90%E8%8A%82%E7%82%B9%E6%95%B0%E5%AD%97%E4%B9%8B%E5%92%8C.html#%E5%85%B6%E4%BB%96%E8%AF%AD%E8%A8%80%E7%89%88%E6%9C%AC
 # but other parts are confusing af, for this solutions pop
-# think of it as pop from the current node after traversing left and right
+# think of it as popping the current node after traversing left and right, say at 9, after traversing 5 and 1, we pop 9
 class Solution:
     def sumNumbers(self, root: Optional[TreeNode]) -> int:
         stack = []
@@ -991,8 +987,48 @@ class Solution:
         dfs(root)
         return sum(res)
 
+# bfs, modified from others but quite interesting
+class Solution:
+    def sumNumbers(self, root: Optional[TreeNode]) -> int:
+        res = 0
+        queue = deque([(root,0)])
+        while queue:
+            for i in range(len(queue)):
+                node, cur = queue.popleft()
+                cur = cur * 10 + node.val
+                if not node.left and not node.right:
+                    res += cur
+                if node.left:
+                    queue.append((node.left,cur))
+                if node.right:
+                    queue.append((node.right,cur))
+        return res
+
 
 # 270. Closest Binary Search Tree Value
+# very similar to the iterative approach, but i kinda come up myself
+class Solution:
+    def closestValue(self, root: Optional[TreeNode], target: float) -> int:
+        closest = inf
+        def dfs(node, target) -> None:
+            if node is None:
+                return
+            
+            nonlocal closest
+            if abs(node.val - target) < abs(closest - target):
+                closest = node.val
+            elif abs(node.val - target) == abs(closest - target):
+                closest = min(closest, node.val)
+
+            if target < node.val:
+                dfs(node.left, target)
+            elif target > node.val:
+                dfs(node.right, target)
+            
+        dfs(root, target)
+        return closest
+
+
 class Solution:
     def closestValue(self, root: Optional[TreeNode], target: float) -> int:
         closest = root.val
@@ -1002,7 +1038,7 @@ class Solution:
             elif abs(root.val - target) == abs(closest - target):
                 closest = min(closest, root.val)
             
-            if target <= root.val:
+            if target < root.val:
                 root = root.left
             else:
                 root = root.right
@@ -1059,7 +1095,7 @@ class Solution:
             nums[temp_idx], nums[end] = nums[end], nums[temp_idx]
             temp_idx += 1
             end -= 1
-        return nums
+
 
 # 958. Check Completeness of a Binary Tree
 # the important thing is that we don't want to check if node.left
@@ -1235,8 +1271,6 @@ class Solution:
         
 
 # 721. Accounts Merge
-from collections import defaultdict
-
 class Solution:
     def accountsMerge(self, account_list):
         # Build the adjacency list
@@ -1334,3 +1368,52 @@ class Solution:
             profit = max(profit, price-minPrice)
         return profit
         
+# 34. Find First and Last Position of Element in Sorted Array
+# such a beauty solution, love it!
+class Solution:
+    def searchRange(self, nums: List[int], target: int) -> List[int]:
+        def findBound(isLower: bool) -> int:
+            low, high = 0, len(nums) - 1
+            index = -1
+            while low <= high:
+                mid = (low + high) // 2
+                if nums[mid] == target:
+                    index = mid
+                    if isLower:
+                        high = mid - 1  # Move left for lower bound
+                    else:
+                        low = mid + 1  # Move right for upper bound
+                elif nums[mid] > target:
+                    high = mid - 1
+                else:
+                    low = mid + 1
+            return index
+
+        # Use the same function for lower and upper bounds
+        lowerBound = findBound(isLower=True)
+        upperBound = findBound(isLower=False)
+        return [lowerBound, upperBound]
+
+# 1539. Kth Missing Positive Number
+class Solution:
+    def findKthPositive(self, arr: List[int], k: int) -> int:
+        left, right = 0, len(arr) - 1
+        while left <= right:
+            pivot = (left + right) // 2
+            # If number of positive integers
+            # which are missing before arr[pivot]
+            # is less than k -->
+            # continue to search on the right.
+            if arr[pivot] - pivot - 1 < k:
+                left = pivot + 1
+            # Otherwise, go left.
+            else:
+                right = pivot - 1
+
+        # At the end of the loop, left = right + 1,
+        # and the kth missing is in-between arr[right] and arr[left].
+        # The number of integers missing before arr[right] is
+        # arr[right] - right - 1 -->
+        # the number to return is
+        # arr[right] + k - (arr[right] - right - 1) = k + left
+        return left + k
