@@ -1417,3 +1417,19 @@ class Solution:
         # the number to return is
         # arr[right] + k - (arr[right] - right - 1) = k + left
         return left + k
+
+# 605. Can Place Flowers
+class Solution:
+    def canPlaceFlowers(self, flowerbed: List[int], n: int) -> bool:
+        count = 0
+        for i in range(len(flowerbed)):
+            if flowerbed[i] == 0:
+                left = 1 if i == 0 or flowerbed[i-1] == 0 else 0
+                right = 1 if i == len(flowerbed) - 1 or flowerbed[i+1] == 0 else 0
+
+                if left and right:
+                    count += 1
+                    if count == n:
+                        return True
+                    flowerbed[i] = 1
+        return True if count >= n else False
